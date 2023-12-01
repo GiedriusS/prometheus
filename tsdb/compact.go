@@ -599,7 +599,7 @@ func (c *LeveledCompactor) write(dest string, meta *BlockMeta, blockPopulator Bl
 		}
 	}
 
-	indexw, err := index.NewWriter(c.ctx, filepath.Join(tmp, indexFilename))
+	indexw, err := index.NewWriter(c.ctx, filepath.Join(tmp, indexFilename), nil)
 	if err != nil {
 		return errors.Wrap(err, "open index writer")
 	}
