@@ -13,7 +13,11 @@
 
 package v1
 
-import "github.com/munnerz/goautoneg"
+import (
+	"io"
+
+	"github.com/munnerz/goautoneg"
+)
 
 // A Codec performs encoding of API responses.
 type Codec interface {
@@ -24,7 +28,7 @@ type Codec interface {
 	CanEncode(resp *Response) bool
 
 	// Encode encodes resp, ready for transmission to an API consumer.
-	Encode(resp *Response) ([]byte, error)
+	Encode(resp *Response, w io.Writer) error
 }
 
 type MIMEType struct {

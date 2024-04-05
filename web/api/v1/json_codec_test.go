@@ -14,7 +14,11 @@
 package v1
 
 import (
+	"bytes"
+	"fmt"
+	"io"
 	"math"
+	"strings"
 	"testing"
 
 	"github.com/prometheus/prometheus/model/exemplar"
@@ -22,7 +26,39 @@ import (
 	"github.com/prometheus/prometheus/model/labels"
 	"github.com/prometheus/prometheus/promql"
 	"github.com/prometheus/prometheus/promql/parser"
+	"github.com/stretchr/testify/require"
 )
+
+func BenchmarkJsonCodec_Encode(b *testing.B) {
+	var s []promql.Series
+
+	for i := 0; i < 1_000_000; i++ {
+		s = append(s, promql.Series{
+			Floats: []promql.FPoint{{F: 1, T: 1000}},
+			Metric: labels.FromStrings("__name__", "foo", "a", fmt.Sprintf("%d", i)),
+		})
+	}
+
+	resp := &Response{
+		Status: statusSuccess,
+		Data: &QueryData{
+			ResultType: parser.ValueTypeMatrix,
+			Result:     promql.Matrix(s),
+		},
+	}
+
+	b.ReportAllocs()
+	for _, e := range []jsonEncoder{jsonV2, jsonIter, jsonMarshal} {
+		b.Run(string(e), func(b *testing.B) {
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				codec := JSONCodec{encoder: e}
+
+				require.NoError(b, codec.Encode(resp, io.Discard))
+			}
+		})
+	}
+}
 
 func TestJsonCodec_Encode(t *testing.T) {
 	cases := []struct {
@@ -162,17 +198,21 @@ func TestJsonCodec_Encode(t *testing.T) {
 
 	codec := JSONCodec{}
 
-	for _, c := range cases {
-		body, err := codec.Encode(&Response{
-			Status: statusSuccess,
-			Data:   c.response,
-		})
-		if err != nil {
-			t.Fatalf("Error encoding response body: %s", err)
-		}
+	for i, c := range cases {
+		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+			bw := &bytes.Buffer{}
 
-		if string(body) != c.expected {
-			t.Fatalf("Expected response \n%v\n but got \n%v\n", c.expected, string(body))
-		}
+			err := codec.Encode(&Response{
+				Status: statusSuccess,
+				Data:   c.response,
+			}, bw)
+			if err != nil {
+				t.Fatalf("Error encoding response body: %s", err)
+			}
+
+			if strings.TrimSpace(bw.String()) != strings.TrimSpace(c.expected) {
+				t.Fatalf("Expected response \n%v\n but got \n%v\n", c.expected, bw.String())
+			}
+		})
 	}
 }

@@ -1756,17 +1756,13 @@ func (api *API) respond(w http.ResponseWriter, req *http.Request, data interface
 		return
 	}
 
-	b, err := codec.Encode(resp)
-	if err != nil {
-		level.Error(api.logger).Log("msg", "error marshaling response", "err", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
 	w.Header().Set("Content-Type", codec.ContentType().String())
 	w.WriteHeader(http.StatusOK)
-	if n, err := w.Write(b); err != nil {
-		level.Error(api.logger).Log("msg", "error writing response", "bytesWritten", n, "err", err)
+
+	if err = codec.Encode(resp, w); err != nil {
+		level.Error(api.logger).Log("msg", "error writing response", "err", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 }
 

@@ -3760,8 +3760,9 @@ func (t *testCodec) CanEncode(_ *Response) bool {
 	return t.canEncode
 }
 
-func (t *testCodec) Encode(_ *Response) ([]byte, error) {
-	return []byte(fmt.Sprintf("response from %v codec", t.contentType)), nil
+func (t *testCodec) Encode(_ *Response, w io.Writer) error {
+	_, err := w.Write([]byte(fmt.Sprintf("response from %v codec", t.contentType)))
+	return err
 }
 
 func TestExtractQueryOpts(t *testing.T) {

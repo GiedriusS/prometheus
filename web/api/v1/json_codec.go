@@ -14,8 +14,13 @@
 package v1
 
 import (
+	"bytes"
+	"fmt"
+	"io"
 	"unsafe"
 
+	jsonv2 "github.com/go-json-experiment/json"
+	"github.com/go-json-experiment/json/jsontext"
 	jsoniter "github.com/json-iterator/go"
 
 	"github.com/prometheus/prometheus/model/exemplar"
@@ -33,8 +38,18 @@ func init() {
 	jsoniter.RegisterTypeEncoderFunc("labels.Labels", unsafeMarshalLabelsJSON, labelsIsEmpty)
 }
 
+type jsonEncoder string
+
+const (
+	jsonIter    jsonEncoder = "json-iter"
+	jsonV2      jsonEncoder = "json-v2"
+	jsonMarshal jsonEncoder = "json-marshal"
+)
+
 // JSONCodec is a Codec that encodes API responses as JSON.
-type JSONCodec struct{}
+type JSONCodec struct {
+	encoder jsonEncoder
+}
 
 func (j JSONCodec) ContentType() MIMEType {
 	return MIMEType{Type: "application", SubType: "json"}
@@ -44,9 +59,52 @@ func (j JSONCodec) CanEncode(_ *Response) bool {
 	return true
 }
 
-func (j JSONCodec) Encode(resp *Response) ([]byte, error) {
-	json := jsoniter.ConfigCompatibleWithStandardLibrary
-	return json.Marshal(resp)
+func (j JSONCodec) Encode(resp *Response, w io.Writer) error {
+	switch j.encoder {
+	case jsonIter:
+		json := jsoniter.ConfigCompatibleWithStandardLibrary
+
+		return json.NewEncoder(w).Encode(resp)
+	case jsonV2:
+		marshalers := jsonv2.NewMarshalers(
+			// {"a":"b", "c": "d", ...}
+			jsonv2.MarshalFuncV2[labels.Labels](
+				func(e *jsontext.Encoder, lbls labels.Labels, o jsonv2.Options) error {
+					e.WriteToken(jsontext.ObjectStart)
+					lbls.Range(func(l labels.Label) {
+						e.WriteToken(jsontext.String(l.Name))
+						e.WriteToken(jsontext.String(l.Value))
+					})
+					e.WriteToken(jsontext.ObjectEnd)
+
+					return nil
+				},
+			),
+			// Write `[ts, "1.234"]`.
+			jsonv2.MarshalFuncV2[promql.FPoint](
+				func(e *jsontext.Encoder, p promql.FPoint, o jsonv2.Options) error {
+					e.WriteToken(jsontext.ArrayStart)
+					e.WriteToken(jsontext.Int(p.T))
+					e.WriteToken(jsontext.Float(p.F))
+					e.WriteToken(jsontext.ArrayEnd)
+					return nil
+				},
+			),
+		)
+		return jsonv2.MarshalWrite(w, resp, jsonv2.WithMarshalers(marshalers))
+	case jsonMarshal:
+		json := jsoniter.ConfigCompatibleWithStandardLibrary
+
+		v, err := json.Marshal(resp)
+		if err != nil {
+			return err
+		}
+
+		_, err = io.Copy(w, bytes.NewBuffer(v))
+		return err
+	}
+
+	panic(fmt.Sprintf("unsupported codec %s", j.encoder))
 }
 
 // marshalSeriesJSON writes something like the following:
