@@ -558,10 +558,10 @@ func (b *blockBaseSeriesSet) Next() bool {
 		}
 
 		if trimFront {
-			intervals = intervals.Add(tombstones.Interval{Mint: math.MinInt64, Maxt: b.mint - 1})
+			intervals = intervals.Add(tombstones.Interval{Mint: math.MinInt64, Maxt: b.mint - 1}, false)
 		}
 		if trimBack {
-			intervals = intervals.Add(tombstones.Interval{Mint: b.maxt + 1, Maxt: math.MaxInt64})
+			intervals = intervals.Add(tombstones.Interval{Mint: b.maxt + 1, Maxt: math.MaxInt64}, false)
 		}
 
 		b.curr.labels = b.builder.Labels()
@@ -641,7 +641,7 @@ func (p *populateWithDelGenericSeriesIterator) next(copyHeadChunk bool) bool {
 	p.bufIter.Intervals = p.bufIter.Intervals[:0]
 	for _, interval := range p.intervals {
 		if p.currMeta.OverlapsClosedInterval(interval.Mint, interval.Maxt) {
-			p.bufIter.Intervals = p.bufIter.Intervals.Add(interval)
+			p.bufIter.Intervals = p.bufIter.Intervals.Add(interval, true)
 		}
 	}
 

@@ -318,7 +318,7 @@ func (t *MemTombstones) AddInterval(ref storage.SeriesRef, itvs ...Interval) {
 	t.mtx.Lock()
 	defer t.mtx.Unlock()
 	for _, itv := range itvs {
-		t.intvlGroups[ref] = t.intvlGroups[ref].Add(itv)
+		t.intvlGroups[ref] = t.intvlGroups[ref].Add(itv, false)
 	}
 }
 
@@ -350,8 +350,12 @@ type Intervals []Interval
 
 // Add the new time-range to the existing ones.
 // The existing ones must be sorted.
-func (in Intervals) Add(n Interval) Intervals {
+func (in Intervals) Add(n Interval, inPlace bool) Intervals {
 	if len(in) == 0 {
+		if inPlace {
+			in = append(in, n)
+			return in
+		}
 		return append(in, n)
 	}
 	// Find min and max indexes of intervals that overlap with the new interval.
@@ -361,6 +365,10 @@ func (in Intervals) Add(n Interval) Intervals {
 	if n.Mint != math.MinInt64 { // Avoid overflow.
 		mini = sort.Search(len(in), func(i int) bool { return in[i].Maxt >= n.Mint-1 })
 		if mini == len(in) {
+			if inPlace {
+				in = append(in, n)
+				return in
+			}
 			return append(in, n)
 		}
 	}
@@ -370,7 +378,15 @@ func (in Intervals) Add(n Interval) Intervals {
 		maxi = sort.Search(len(in)-mini, func(i int) bool { return in[mini+i].Mint > n.Maxt+1 })
 		if maxi == 0 {
 			if mini == 0 {
+				if inPlace {
+					in = append(Intervals{n}, in...)
+					return in
+				}
 				return append(Intervals{n}, in...)
+			}
+			if inPlace {
+				in = append(in[:mini], append(Intervals{n}, in[mini:]...)...)
+				return in
 			}
 			return append(in[:mini], append(Intervals{n}, in[mini:]...)...)
 		}
@@ -382,6 +398,11 @@ func (in Intervals) Add(n Interval) Intervals {
 	in[mini].Maxt = in[maxi+mini-1].Maxt
 	if n.Maxt > in[mini].Maxt {
 		in[mini].Maxt = n.Maxt
+	}
+
+	if inPlace {
+		in = append(in[:mini+1], in[maxi+mini:]...)
+		return in
 	}
 	return append(in[:mini+1], in[maxi+mini:]...)
 }

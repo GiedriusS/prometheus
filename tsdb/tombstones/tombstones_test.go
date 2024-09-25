@@ -44,7 +44,7 @@ func TestWriteAndReadbackTombstones(t *testing.T) {
 		dranges := make(Intervals, 0, numRanges)
 		mint := rand.Int63n(time.Now().UnixNano())
 		for j := 0; j < numRanges; j++ {
-			dranges = dranges.Add(Interval{mint, mint + rand.Int63n(1000)})
+			dranges = dranges.Add(Interval{mint, mint + rand.Int63n(1000)}, false)
 			mint += rand.Int63n(1000) + 1
 		}
 		stones.AddInterval(storage.SeriesRef(ref), dranges...)
@@ -66,7 +66,7 @@ func TestDeletingTombstones(t *testing.T) {
 	ref := storage.SeriesRef(42)
 	mint := rand.Int63n(time.Now().UnixNano())
 	dranges := make(Intervals, 0, 1)
-	dranges = dranges.Add(Interval{mint, mint + rand.Int63n(1000)})
+	dranges = dranges.Add(Interval{mint, mint + rand.Int63n(1000)}, false)
 	stones.AddInterval(ref, dranges...)
 	stones.AddInterval(storage.SeriesRef(43), dranges...)
 
@@ -88,7 +88,7 @@ func TestTombstonesGetWithCopy(t *testing.T) {
 	intervals0, err := stones.Get(1)
 	require.NoError(t, err)
 	require.Equal(t, Intervals{{Mint: 1, Maxt: 2}, {Mint: 7, Maxt: 8}, {Mint: 11, Maxt: 12}}, intervals0)
-	intervals1 := intervals0.Add(Interval{Mint: 4, Maxt: 6})
+	intervals1 := intervals0.Add(Interval{Mint: 4, Maxt: 6}, false)
 	require.Equal(t, Intervals{{Mint: 1, Maxt: 2}, {Mint: 4, Maxt: 8}, {Mint: 11, Maxt: 12}}, intervals0) // Original slice changed.
 	require.Equal(t, Intervals{{Mint: 1, Maxt: 2}, {Mint: 4, Maxt: 8}, {Mint: 11, Maxt: 12}}, intervals1)
 
@@ -250,7 +250,7 @@ func TestAddingNewIntervals(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run("", func(t *testing.T) {
-			require.Equal(t, c.exp, c.exist.Add(c.new))
+			require.Equal(t, c.exp, c.exist.Add(c.new, false))
 		})
 	}
 }

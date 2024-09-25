@@ -4013,7 +4013,7 @@ func TestChunkSnapshot(t *testing.T) {
 		actTombstones := make(map[storage.SeriesRef]tombstones.Intervals)
 		require.NoError(t, tr.Iter(func(ref storage.SeriesRef, itvs tombstones.Intervals) error {
 			for _, itv := range itvs {
-				actTombstones[ref].Add(itv)
+				actTombstones[ref].Add(itv, false)
 			}
 			return nil
 		}))
@@ -4108,7 +4108,7 @@ func TestChunkSnapshot(t *testing.T) {
 				{Mint: 3456, Maxt: 4567},
 			}
 			for _, itv := range itvs {
-				expTombstones[ref].Add(itv)
+				expTombstones[ref].Add(itv, false)
 			}
 			head.tombstones.AddInterval(ref, itvs...)
 			err := head.wal.Log(enc.Tombstones([]tombstones.Stone{
@@ -4182,7 +4182,7 @@ func TestChunkSnapshot(t *testing.T) {
 				{Mint: 34567, Maxt: 45678},
 			}
 			for _, itv := range itvs {
-				expTombstones[ref].Add(itv)
+				expTombstones[ref].Add(itv, false)
 			}
 			head.tombstones.AddInterval(ref, itvs...)
 			err := head.wal.Log(enc.Tombstones([]tombstones.Stone{

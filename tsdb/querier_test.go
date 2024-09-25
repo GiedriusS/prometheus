@@ -982,7 +982,7 @@ func TestPopulateWithTombSeriesIterators(t *testing.T) {
 				{sample{1, 2, nil, nil}, sample{2, 3, nil, nil}, sample{3, 5, nil, nil}, sample{6, 1, nil, nil}},
 				{sample{7, 89, nil, nil}, sample{9, 8, nil, nil}},
 			},
-			intervals: tombstones.Intervals{{Mint: math.MinInt64, Maxt: 2}}.Add(tombstones.Interval{Mint: 9, Maxt: math.MaxInt64}),
+			intervals: tombstones.Intervals{{Mint: math.MinInt64, Maxt: 2}}.Add(tombstones.Interval{Mint: 9, Maxt: math.MaxInt64}, false),
 
 			expected: []chunks.Sample{
 				sample{3, 5, nil, nil}, sample{6, 1, nil, nil}, sample{7, 89, nil, nil},
@@ -1064,7 +1064,7 @@ func TestPopulateWithTombSeriesIterators(t *testing.T) {
 				{sample{1, 2, nil, nil}, sample{2, 3, nil, nil}, sample{3, 5, nil, nil}, sample{6, 1, nil, nil}},
 				{sample{7, 89, nil, nil}, sample{9, 8, nil, nil}},
 			},
-			intervals: tombstones.Intervals{{Mint: math.MinInt64, Maxt: 2}}.Add(tombstones.Interval{Mint: 9, Maxt: math.MaxInt64}),
+			intervals: tombstones.Intervals{{Mint: math.MinInt64, Maxt: 2}}.Add(tombstones.Interval{Mint: 9, Maxt: math.MaxInt64}, false),
 
 			seek:        3,
 			seekSuccess: true,
@@ -1078,7 +1078,7 @@ func TestPopulateWithTombSeriesIterators(t *testing.T) {
 				{sample{2, 3, nil, nil}, sample{3, 5, nil, nil}, sample{6, 1, nil, nil}},
 				{sample{7, 89, nil, nil}, sample{9, 8, nil, nil}},
 			},
-			intervals: tombstones.Intervals{{Mint: math.MinInt64, Maxt: 3}}.Add(tombstones.Interval{Mint: 4, Maxt: math.MaxInt64}),
+			intervals: tombstones.Intervals{{Mint: math.MinInt64, Maxt: 3}}.Add(tombstones.Interval{Mint: 4, Maxt: math.MaxInt64}, false),
 
 			expected:     nil,
 			expectedChks: nil,
@@ -2018,7 +2018,7 @@ func TestPopulateWithDelSeriesIterator_NextWithMinTime(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			f, chkMetas := createFakeReaderAndNotPopulatedChunks(tc.chks...)
 			it := &populateWithDelSeriesIterator{}
-			it.reset(ulid.ULID{}, f, chkMetas, tombstones.Intervals{{Mint: math.MinInt64, Maxt: 2}}.Add(tombstones.Interval{Mint: 4, Maxt: math.MaxInt64}))
+			it.reset(ulid.ULID{}, f, chkMetas, tombstones.Intervals{{Mint: math.MinInt64, Maxt: 2}}.Add(tombstones.Interval{Mint: 4, Maxt: math.MaxInt64}, false))
 			require.Equal(t, chunkenc.ValNone, it.Next())
 			require.Equal(t, int64(1), chkMetas[0].MinTime)
 		})
